@@ -1,3 +1,3 @@
 # Images
 
-Includes images used in this deface. 
+Included images used in this deface. 
