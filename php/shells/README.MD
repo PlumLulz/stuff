@@ -10,3 +10,7 @@ This was a shell I wrote a few years after the TeamPS shell. This was mainly jus
 
 ![Plum](https://i.imgur.com/bmSdqqP.png)
 
+## Backbox Terminal Shell (command_line.php)
+This was an experimental shell that I created for fun awhile back. It has a draggable Backbox terminal window that works similarily than a real terminal. This was never completed and still contains many of bugs and incomplete areas. 
+
+![Backbox](https://i.imgur.com/KWSOCbs.png)
