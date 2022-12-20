@@ -1,0 +1,130 @@
+.statsCircle {
+    border-radius: 50%;
+    display: inline-block;
+    width: 200px;
+    font-size: 32px;
+    border: 2px solid #666;
+    background-color: #272b30;
+}
+.statsCircle span {
+    text-align: center;
+    line-height: 200px;
+}
+#backdrop {
+background-color:#000000;
+position:fixed;
+top:0;
+left:0;
+right:0;
+bottom:0;
+z-index:10000;
+opacity: 0.7;
+display: none;
+}
+
+#loadimage {
+display: none;
+width: 32px;
+height: 32px;
+background-image: url('./images/loading.gif');
+}
+
+div#login {
+z-index:11000;
+margin-left: auto;
+margin-right: auto;
+padding: 30px;
+border: 1px solid rgba(0,0,0,.2);
+-moz-border-radius: 5px;
+-webkit-border-radius: 5px;
+border-radius: 5px;
+-moz-background-clip: padding;
+-webkit-background-clip: padding-box;
+background-clip: padding-box;
+background: rgba(0, 0, 0, .4);
+-moz-box-shadow: 0 0 13px 3px rgba(247, 13, 26, .5);
+-webkit-box-shadow: 0 0 13px 3px rgba(247, 13, 26, .5);
+box-shadow: 0 0 13px 3px rgba(247, 13, 26, .5);
+overflow: hidden;
+font-family: 'Permanent Marker', cursive;
+}
+#loginposi, #registerposi { 
+position:fixed;
+top:50%;
+left:-20%;
+z-index:11000;
+width:427px;
+margin:-250px 0 0 -280px;
+display: none;
+}
+div#error {
+	color: red;
+	font-size: 20px;
+	font-weight: bold;
+}
+.styledInput { 
+	background: rgba(37, 37, 37, .5);
+	-moz-box-shadow: 0 0 13px 3px rgba(247, 13, 26, .5);
+	-webkit-box-shadow: 0 0 13px 3px rgba(247, 13, 26, .5);
+	box-shadow: 0 0 13px 3px rgba(247, 13, 26, .5);
+	padding: 7px; 
+	width: 310px; 
+	border: none;
+	-webkit-border-radius: 2px; 
+	-moz-border-radius: 2px; 
+	border-radius: 2px;
+	color: #F70D1A;
+	outline: none;
+}
+
+#recaptcha_response_field {
+	background: rgba(37, 37, 37, .5);
+	border: none !important;
+	outline: none;
+	color: #F70D1A !important;
+}
+#recaptcha_response_field::-webkit-input-placeholder {
+  color: #F70D1A;
+}
+#recaptcha_response_field:-moz-placeholder {
+  color: #F70D1A;
+}
+#recaptcha_response_field:-ms-input-placeholder {
+  color: #F70D1A;
+}
+
+div#ChatBox {
+	font-size: 16px;
+	background: rgba(37, 37, 37, .5);
+	-moz-box-shadow: 0 0 13px 3px rgba(247, 13, 26, .5);
+	-webkit-box-shadow: 0 0 13px 3px rgba(247, 13, 26, .5);
+	box-shadow: 0 0 13px 3px rgba(247, 13, 26, .5); 
+	color: #FF0000; 
+	border: none;
+	-webkit-border-radius: 2px; 
+	-moz-border-radius: 2px; 
+	border-radius: 2px;
+	height: 300px;
+	width: 100%;
+	word-wrap: break-word;
+	overflow: auto;
+}
+div#ChatBoxContent {
+	padding: 7px;
+}
+
+div#music_information {
+	width: 660px;
+}
+.ascii {
+   text-align: center;
+ }
+
+.ascii pre {
+  display: inline-block;
+  text-align: left;
+  background-color: #272b30;
+  font-size: 14px;
+  color: red;
+  border: none;
+ }
