@@ -5,7 +5,7 @@ This is a MySQL Dumper that uses a Python console to interact with the PHP file.
 ## Speed Comparison
 These tests were done on the same host with the same 2GB database. Times are taken from the start to the end of file compression. 
 
-MSDv2.2: 3:37s/
+MSDv2.2: 3:37s\
 MSDpy: 2:01s
 
 Usage:
