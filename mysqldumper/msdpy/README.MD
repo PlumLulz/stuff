@@ -10,7 +10,7 @@ msd2.2: 3:19\
 msdpy: 1:10
 
 ## 5.3GB
-msdv2.2: 13:46\
+msd2.2: 13:46\
 msdpy: 5:53
 
 Usage:
