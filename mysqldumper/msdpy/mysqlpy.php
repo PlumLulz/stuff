@@ -227,7 +227,7 @@ class PythonDump {
 	        gzclose($gz);
 	        unlink("./dumps/".$file);
 		}
-		return $this->jsonify(0, $file);
+		return $this->jsonify(0, "LOL");
 	}
 }
 
