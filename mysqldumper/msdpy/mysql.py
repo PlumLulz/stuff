@@ -1,7 +1,9 @@
 import gevent
 import argparse
 import readline
+import json
 import numpy as np
+import shlex
 from time import time
 from gevent import monkey
 from gevent.pool import Pool
@@ -70,6 +72,19 @@ def generate_request_array(pdata, chunks):
 		i += 1
 	return requestdata
 
+# Download file from server
+def download(sourcefile):
+	with open("./dumps/"+sourcefile, "ab+") as outfile:
+		urlp = urlparse(url)
+		surl = "%s://%s%s/dumps/%s" % (urlp.scheme, urlp.netloc, urlp.path.rsplit("/", 1)[0], sourcefile)
+		req = requests.get(surl, stream=True)
+		clen = int(req.headers.get('Content-Length')) / 1024
+		bar = IncrementalBar("Downloading file '%s'" % (sourcefile), max=clen, suffix='%(percent)d%%')
+		for chunk in req.iter_content(1024):
+			outfile.write(chunk)
+			bar.next()
+		bar.finish()
+
 # Used to confirm if user would like to do certain actions before processing request
 def confirm(message):
     while True:
@@ -98,144 +113,279 @@ elif resp['response_code'] == 1:
 	# Connection was established and MySQL information was correct
 	header()
 	print(resp['response'])
-	# currentdb = None
+	print("Type 'help' for more assistance.")
+	currentdb = None
 	while True:
 		try:
-			# inputline = mysqlusername+"@"+mysqlhost+"["+currentdb+"]> " if currentdb is not None else mysqlusername+"@"+mysqlhost+"> "
-			input_var = input(mysqlusername+"@"+mysqlhost+"$ ")
+			inputline = mysqlusername+"@"+mysqlhost+"[\033[0;31m"+currentdb+"\033[00m]> " if currentdb is not None else mysqlusername+"@"+mysqlhost+"> "
+			input_var = input(inputline)
 			postdata2 = postdata.copy()
 			if input_var[0:14] == 'show databases':
-				show = input_var.split(' ')[-1]
-				postdata2.update({"get_databases": show})
-				req = requests.post(url, data=postdata2)
-				resp = req.json()
-				table = PrettyTable()
-				if resp['response_code'] == 1:
-					table.field_names = ["Database"]
-					table.align = "l"
-					for line in resp['response'].splitlines():
-						table.add_row([line])
-				else:
-					table.field_names = ["Database", "Size"]
-					table.align = "l"
-					for line in resp['response'].splitlines():
-						spl = line.split(":")
-						table.add_row([spl[0], spl[1]])	
-				print(table)
-			elif input_var[0:11] == 'show tables':
-				database = input_var.split(' ')[-2] if '-' in input_var else input_var.split(' ')[-1]
-				count = input_var.split(' ')[-1] if '-' in input_var else 0
-				postdata2.update({"get_tables": count, "database": database})
-				req = requests.post(url, data=postdata2)
-				resp = req.json()
-				table = PrettyTable()
-				if resp['response_code'] == 0:
-					table = resp['response']
-				elif resp['response_code'] == 1:
-					table.field_names = ["Tables in "+database]
-					table.align = "l"
-					for line in resp['response'].splitlines():
-						table.add_row([line])
-				elif resp['response_code'] == 2:
-					table.field_names = ["Tables in "+database, "Row Count"]
-					table.align = "l"
-					for line in resp['response'].splitlines():
-						spl = line.split(":")
-						table.add_row([spl[0], '{:,}'.format(int(spl[1]))])
-				elif resp['response_code'] == 3:
-					table.field_names = ["Tables in "+database, "Size of Table"]
-					table.align = "l"
-					for line in resp['response'].splitlines():
-						spl = line.split(":")
-						table.add_row([spl[0], spl[1]])
-				print (table)
-			elif input_var[0:10] == 'dump table':
-				database = input_var.split(' ')[-1]
-				table = input_var.split(' ')[-3]
-				postdata2.update({"dump_table": 0, "db": database, "table": table})
-				req = requests.post(url, data=postdata2)
-				resp = req.json()
-				if resp['response_code'] == 0:
-					# Error something happened with MySQL Query; print MySQL Error
-					print(resp['response'])
-				if resp['response_code'] == 2:
-					# Table under 10,000 rows was dumped
-					print(resp['response'])
-					if confirm("Download table dump?"):
-						print("Download file now")
+				args = input_var[14:]
+				parser = argparse.ArgumentParser(description='Show all databases on MySQL server.', prog='show databases')
+				parser.add_argument("-size", help='Display estimated size of database.', action='store_true')
+				
+				try:
+					parsed = parser.parse_args(shlex.split(args))
+					if parsed.size:
+						flag = "-size"
+					else: 
+						flag = 0
+
+					postdata2.update({"get_databases": flag})
+					req = requests.post(url, data=postdata2)
+					resp = req.json()
+					table = PrettyTable()
+					if resp['response_code'] == 1:
+						table.field_names = ["Database"]
+						table.align = "l"
+						for line in resp['response'].splitlines():
+							table.add_row([line])
 					else:
-						print("Don't download file")
-				elif resp['response_code'] == 1:
-					# Table was > 10,000 so it needs to be broke into chunks
-					# Table will be dumped by 10,000 row increments
-					chunks = np.floor(int(resp['response']) / 10000)
-					# Remove dump_table from POST data list because we need to split the table now
-					postdata2.pop("dump_table")
-					# Generate request for each chunk of the DB
-					requestdata = generate_request_array(postdata2, chunks)
-					i = 0
-					t = time()
-					jobs = []
-					bar = IncrementalBar('Dumping Table ('+table+')', max=len(requestdata), suffix='%(percent)d%%')
-					# Add each request to the pool for workers to handle
-					for l in requestdata:
-						jobs.append(pool.spawn(worker, url, l))
-						i += 1
-					pool.join()
-					t1 = time()
-					t2 = t1-t
-					bar.finish()
-					print ("Runtime: "+str(t2))
+						table.field_names = ["Database", "Size"]
+						table.align = "l"
+						for line in resp['response'].splitlines():
+							spl = line.split(":")
+							table.add_row([spl[0], spl[1]])	
+					print(table)
+				except SystemExit:
+					None
+			elif input_var[0:11] == 'show tables':
+				args = input_var[11:]
+				parser = argparse.ArgumentParser(description='Show all tables from a database..', prog='show tables')
+				if currentdb == None:
+					parser.add_argument("database", help='Database to show tables from.', default=currentdb)
+				g = parser.add_mutually_exclusive_group()
+				g.add_argument("-count", help='Display row count of table.', action='store_true')
+				g.add_argument("-size", help='Display estimated size of table.', action='store_true')
+
+				try:
+					parsed = parser.parse_args(shlex.split(args))
+					if currentdb == None:
+						database = parsed.database
+					else:
+						database = currentdb
+					if parsed.count:
+						flag = "-count"
+					elif parsed.size:
+						flag = "-size"
+					else:
+						flag = 0
+
+					postdata2.update({"get_tables": flag, "database": database})
+					req = requests.post(url, data=postdata2)
+					resp = req.json()
+					table = PrettyTable()
+					if resp['response_code'] == 0:
+						table = resp['response']
+					elif resp['response_code'] == 1:
+						table.field_names = ["Tables in "+database]
+						table.align = "l"
+						for line in resp['response'].splitlines():
+							table.add_row([line])
+					elif resp['response_code'] == 2:
+						table.field_names = ["Tables in "+database, "Row Count"]
+						table.align = "l"
+						for line in resp['response'].splitlines():
+							spl = line.split(":")
+							table.add_row([spl[0], '{:,}'.format(int(spl[1]))])
+					elif resp['response_code'] == 3:
+						table.field_names = ["Tables in "+database, "Size of Table"]
+						table.align = "l"
+						for line in resp['response'].splitlines():
+							spl = line.split(":")
+							table.add_row([spl[0], spl[1]])
+					print (table)
+				except SystemExit:
+					None
+			elif input_var[0:10] == 'dump table':
+				args = input_var[10:]
+				parser = argparse.ArgumentParser(description='Dump table from a database.', prog='dump table')
+				parser.add_argument("table", help='Table to dump.')
+				if currentdb == None:
+					parser.add_argument("database", help='Database to dump table from.')
+
+				try:
+					parsed = parser.parse_args(shlex.split(args))
+					if currentdb == None:
+						database = parsed.database
+					else:
+						database = currentdb
+					table = parsed.table
+
+					postdata2.update({"dump_table": 0, "db": database, "table": table})
+					req = requests.post(url, data=postdata2)
+					resp = req.json()
+					if resp['response_code'] == 0:
+						# Error something happened with MySQL Query; print MySQL Error
+						print(resp['response'])
+					if resp['response_code'] == 2:
+						# Table under 10,000 rows was dumped
+						print(resp['response'])
+						postdata2 = postdata.copy()
+
+						# Compress table dump
+						filename = "%s_%s.sql" % (database, table)
+						writefile = "%s_%s.sql.gz" % (database, table)
+						jsondump = json.dumps({"files": [filename]})
+						postdata2.update({"compress": "", "source_file": jsondump, "write_file": writefile})
+						req = requests.post(url, data=postdata2)
+
+						if confirm("Download '%s'?" % (writefile)):
+							download(writefile)
+					elif resp['response_code'] == 1:
+						# Table was > 10,000 so it needs to be broke into chunks
+						# Table will be dumped by 10,000 row increments
+						chunks = np.floor(int(resp['response']) / 10000)
+						# Remove dump_table from POST data list because we need to split the table now
+						postdata2.pop("dump_table")
+						# Generate request for each chunk of the DB
+						requestdata = generate_request_array(postdata2, chunks)
+						t = time()
+						jobs, files = [], []
+						bar = IncrementalBar("Dumping table '%s'" % (table), max=len(requestdata), suffix='%(percent)d%%')
+						# Add each request to the pool for workers to handle
+						i = 0
+						for l in requestdata:
+							jobs.append(pool.spawn(worker, url, l))
+							files.append("%s_%s_%s.sql" % (database, table, i))
+							i += 1
+						pool.join()
+						bar.finish()
+
+						# Split files list into chunks of 20 to send to server
+						# This is much faster than sending a request for each file to be compressed
+						filescombine = [files[i:i+20] for i in range(0, len(files),20)]
+
+						# Compress chunks into one file
+						bar = IncrementalBar("Compressing table '%s'" % (table), max=len(filescombine), suffix='%(percent)d%%')
+						for filename in filescombine:
+							writefile = "%s_%s.sql.gz" % (database, table)
+							jsondump = json.dumps({"files": filename})
+							postdata2.update({"compress" : "", "source_file": jsondump, "write_file": writefile})
+							req = requests.post(url, data=postdata2)
+							resp = req.json()
+							bar.next()
+						bar.finish()
+						t1 = time()
+						print ("Runtime: "+str(t1-t))
+
+						if confirm("Download '%s'?" % (writefile)):
+							download(writefile)
+				except SystemExit:
+					None
 			elif input_var[0:13] == 'dump database':
-				database = input_var.split(' ')[-1]
-				postdata2.update({"get_tables": "-count", "database": database})
-				req = requests.post(url, data=postdata2)
-				resp = req.json()
-				if resp['response_code'] == 0:
-					print (resp['response'])
-				elif resp['response_code'] == 2:
-					requestdata = []
-					postdata2.pop("get_tables")
-					postdata2.pop("database")
-					for line in resp['response'].splitlines():
-						spl = line.split(":")
-						table = spl[0]
-						rowcount = spl[1]
-						postdata3 = postdata2.copy()
-						if int(rowcount) < 10000:
-							postdata3.update({"dump_table": 0, "db": database, "table": table})
-							requestdata.append(postdata3.copy())
-						else:
-							postdata3.update({"table": table, "db": database})
-							data = generate_request_array(postdata3, np.floor(int(rowcount) / 10000))
-							requestdata.extend(data)
-					i = 0
-					t = time()
-					jobs = []
-					files = []
-					bar = IncrementalBar('Dumping DB ('+database+')', max=len(requestdata), suffix='%(percent)d%%')
-					for l in requestdata:
-						jobs.append(pool.spawn(worker, url, l))
-						if "currentchunk" not in l:
-							files.append(l['db']+"_"+l['table']+".sql")
-						else:
-							files.append(l['db']+"_"+l['table']+"_"+str(l['currentchunk'])+".sql")
-						i += 1
-					pool.join()
-					bar.finish()
-					bar = IncrementalBar('Compress DB into one file', max=len(files), suffix='%(percent)d%%')
-					for filename in files:
-						postdata2.update({"compress" : "", "source_file": filename, "write_file": database+".sql.gz"})
+				args = input_var[13:]
+				parser = argparse.ArgumentParser(description='Dump database.', prog='dump database')
+				if currentdb == None:
+					parser.add_argument("database", help='Database to dump.')
+				
+				try:
+					parsed = parser.parse_args(shlex.split(args))
+
+					if currentdb == None:
+						database = parsed.database
+					else:
+						database = currentdb
+
+					# Get tables with row counts to start generating request data
+					postdata2.update({"get_tables": "-count", "database": database})
+					req = requests.post(url, data=postdata2)
+					resp = req.json()
+					if resp['response_code'] == 0:
+						print (resp['response'])
+					elif resp['response_code'] == 2:
+						# Generate request data based off table row count
+						requestdata = []
+						postdata2.pop("get_tables")
+						postdata2.pop("database")
+						for line in resp['response'].splitlines():
+							spl = line.split(":")
+							table = spl[0]
+							rowcount = spl[1]
+							postdata3 = postdata2.copy()
+							if int(rowcount) < 10000:
+								# Table does not need to be split
+								postdata3.update({"dump_table": 0, "db": database, "table": table})
+								requestdata.append(postdata3.copy())
+							else:
+								# Table needs to be split into chunks
+								postdata3.update({"table": table, "db": database})
+								data = generate_request_array(postdata3, np.floor(int(rowcount) / 10000))
+								requestdata.extend(data)
+						
+						# Start creating a pool of workers to send request data
+						t = time()
+						jobs, files = [], []
+						bar = IncrementalBar('Dumping DB ('+database+')', max=len(requestdata), suffix='%(percent)d%%')
+						i = 0
+						for l in requestdata:
+							jobs.append(pool.spawn(worker, url, l))
+							if "currentchunk" not in l:
+								files.append(l['db']+"_"+l['table']+".sql")
+							else:
+								files.append(l['db']+"_"+l['table']+"_"+str(l['currentchunk'])+".sql")
+							i += 1
+						pool.join()
+						bar.finish()
+
+						# Split files list into chunks of 20 to send to server
+						# This is much faster than sending a request for each file to be compressed
+						filescombine = [files[i:i+20] for i in range(0, len(files),20)]
+
+						# Compress each file chunk into one .sql.gz file
+						bar = IncrementalBar('Compress DB into one file', max=len(filescombine), suffix='%(percent)d%%')
+						for filename in filescombine:
+							writefile = "%s.sql.gz" % (database)
+							jsondump = json.dumps({"files": filename})
+							postdata2.update({"compress" : "", "source_file": jsondump, "write_file": writefile})
+							req = requests.post(url, data=postdata2)
+							resp = req.json()
+							bar.next()
+
+						bar.finish()
+						t1 = time()
+						print ("Runtime: "+str(t1-t))
+
+						if confirm("Download '%s'?" % (writefile)):
+							download(writefile)
+				except SystemExit:
+					None
+			elif input_var[0:12] == 'use database':
+				args = input_var[12:]
+				parser = argparse.ArgumentParser(description='Set database to use in session.', prog='use database')
+				parser.add_argument("database", help='Database to use in session.')
+
+				try:
+					parsed = parser.parse_args(shlex.split(args))
+					if parsed.database.lower() == "none":
+						currentdb = None
+					else:
+						postdata2.update({"get_databases": 0})
 						req = requests.post(url, data=postdata2)
 						resp = req.json()
-						bar.next()
-					bar.finish()
-					t1 = time()
-					t2 = t1-t
-					print ("Runtime: "+str(t2))
-			# elif input_var[0:12] == 'use database':
-			# 	database = input_var.split(' ')[-1]
-			# 	currentdb = database
+						if parsed.database in resp["response"].splitlines():
+							currentdb = parsed.database
+							print("Set current database to: %s" % (currentdb))
+						else:
+							print("'%s' is not a valid database to use." % (parsed.database))
+				except SystemExit:
+					None
+			elif input_var == 'help':
+				table = PrettyTable()
+				table.field_names = ["Command", "Description", "Flags"]
+				table.align = "l"
+				table.add_row(["show databases", "Display all databases on MySQL server.", "-size"])
+				table.add_row(["show tables", "Display all tables from a database.", "database*, -size, -count"])
+				table.add_row(["dump table", "Dump table from a database.", "table, database*"])
+				table.add_row(["dump database", "Dump entire database.", "database*"])
+				table.add_row(["use database", "Set database to use for session.", "database"])
+				table.add_row(["clear", "Clears console.", "No flags"])
+
+				print(table)
+				print("* = Not needed if a database is selected for current session.")
+			elif input_var[0:5] == "clear":
+				print("\x1b[2J\x1b[-1;-1H", end="")
 		except KeyboardInterrupt:
 			print ("\nBye")
 			break
