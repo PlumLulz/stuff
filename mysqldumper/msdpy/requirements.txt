@@ -1,0 +1,7 @@
+gevent
+requests
+numpy
+prettytable
+progress
+readline; sys_platform=="linux"
+pyreadline; sys_platform=="win32"
