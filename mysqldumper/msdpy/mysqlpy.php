@@ -216,15 +216,18 @@ class PythonDump {
 	}
 
 	function compress($sourcefile, $writefile) {
-		$gz = gzopen("./dumps/".$writefile, 'a9');
-		$open = fopen("./dumps/".$sourcefile,'rb');
-		while (!feof($open)) {
-			gzwrite($gz, fread($open, 1024 * 512));
-		} 
-        fclose($open);
-        gzclose($gz);
-        unlink("./dumps/".$sourcefile);
-        return $this->jsonify(0, "LOL"); 
+		$json = json_decode($sourcefile);
+		foreach($json->files as $file) {
+			$gz = gzopen("./dumps/".$writefile, 'a9');
+			$open = fopen("./dumps/".$file,'rb');
+			while (!feof($open)) {
+				gzwrite($gz, fread($open, 1024 * 512));
+			} 
+	        fclose($open);
+	        gzclose($gz);
+	        unlink("./dumps/".$file);
+		}
+		return $this->jsonify(0, $file);
 	}
 }
 
