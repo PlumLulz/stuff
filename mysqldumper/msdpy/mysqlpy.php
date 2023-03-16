@@ -23,24 +23,24 @@ class PythonDump {
 		$this->mysqlport = $_POST['mysqlport'];
 		$this->mysqlpassword = $_POST['mysqlpassword'];
 		$this->mysqlusername = $_POST['mysqlusername'];
-		$this->password = '$2y$10$AC/ZxhN1F1cSI90BeTucoePpewEoFAwhRDxhbOqWOqaS9OsaODWqC'; //lol in bcrypt
+		$this->password = '$2y$10$AC/ZxhN1F1cSI90BeTucoePpewEoFAwhRDxhbOqWOqaS9OsaODWqC'; //lol in bcrypt; Use False for no password verification
 	}
 
 	//Creates a json string with a response code and the response from server
 	function jsonify($responsecode, $response) {
-		$jsonar = [
+		$jsonar = array(
 			"response_code" => $responsecode,
 			"response" => $response
-		];
+		);
 		$json = json_encode($jsonar);
 		//Helps with debugging if there is a json error that occurs
 		//Last json error will be sent back to Python console as the response
 		$error = json_last_error();
 		if($error) {
-			$jsonar = [
+			$jsonar = array(
 				"response_code" => "1",
 				"response" => "JSON error: $error"
-			];
+			);
 			return json_encode($jsonar);
 		}
 		return $json;
@@ -57,10 +57,14 @@ class PythonDump {
 	}
 	//Simply checks to make sure password matches hash and user has access
 	function check_password() {
-		if(password_verify($this->userpassword, $this->password)) {
-			return true;
+		if ($this->password != False) {
+			if(password_verify($this->userpassword, $this->password)) {
+				return true;
+			} else {
+				return false;
+			}
 		} else {
-			return false;
+			return True;
 		}
 	}
 	//Connect to MySQL with provided credentials. 
@@ -249,8 +253,9 @@ if(!empty($_POST)) {
 				$phpversion = phpversion();
 				$uname = php_uname();
 				$serverip = $_SERVER['SERVER_ADDR'];
+				$userip = $_SERVER['REMOTE_ADDR'];
 				$software = $_SERVER['SERVER_SOFTWARE'];
-				echo $msd->jsonify(1, "Welcome to MySQL.py\n\nMySQL Version: $version\nMySQL Connection Status: $status\nServer IP: $serverip\nServer Software: $software\nPHP Version: $phpversion\nUname: $uname\n");
+				echo $msd->jsonify(1, "Welcome to MySQL.py\n\nMySQL Version: $version\nMySQL Connection Status: $status\nUser IP: $userip\nServer IP: $serverip\nServer Software: $software\nPHP Version: $phpversion\nUname: $uname\n");
 			}
 		} else {
 			//MySQL error is jsonified and sent back to python console
