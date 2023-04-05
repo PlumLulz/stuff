@@ -38,7 +38,7 @@ class PythonDump {
 		$error = json_last_error();
 		if($error) {
 			$jsonar = array(
-				"response_code" => "1",
+				"response_code" => "5",
 				"response" => "JSON error: $error"
 			);
 			return json_encode($jsonar);
@@ -219,6 +219,36 @@ class PythonDump {
 		}
 	}
 
+	function execute_query($pdo, $query, $database) {
+		try {
+			$use = $pdo->exec("USE $database");
+		}	catch(PDOException $e) {
+				$this->emessage = $e->getMessage();
+				return $this->jsonify(0, $this->emessage);
+		}
+		try {
+			$q = $pdo->query($query);
+			$count = $q->rowCount();
+			if ($count == 0) {
+				return $this->jsonify(0, "No results for query.");
+			}
+			else {
+				$data = array();
+				while($row = $q->fetch(PDO::FETCH_ASSOC)) {
+					array_push($data, $row);
+				}
+				if(empty($data)) {
+					return $this->jsonify(2, $count);
+				} else {
+					return $this->jsonify(1, json_encode($data));
+				}
+			}
+		} catch(PDOException $e) {
+			$this->emessage = $e->getMessage();
+			return $this->jsonify(0, $this->emessage);
+		}
+	}
+
 	function compress($sourcefile, $writefile) {
 		$json = json_decode($sourcefile);
 		foreach($json->files as $file) {
@@ -283,5 +313,8 @@ if(isset($_POST['split_table'])) {
 }
 if(isset($_POST['compress'])) {
 	echo $msd->compress($_POST['source_file'], $_POST['write_file']);
+}
+if(isset($_POST['sql_query'])) {
+	echo $msd->execute_query($mysql, $_POST['query'], $_POST['database']);
 }
 ?>
