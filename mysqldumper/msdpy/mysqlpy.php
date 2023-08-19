@@ -23,7 +23,7 @@ class PythonDump {
 		$this->mysqlport = $_POST['mysqlport'];
 		$this->mysqlpassword = $_POST['mysqlpassword'];
 		$this->mysqlusername = $_POST['mysqlusername'];
-		$this->password = '$2y$10$AC/ZxhN1F1cSI90BeTucoePpewEoFAwhRDxhbOqWOqaS9OsaODWqC'; //lol in bcrypt; Use False for no password verification
+		$this->password = '9cdfb439c7876e703e307864c9167a15'; //lol in md5; Use False for no password verification
 	}
 
 	//Creates a json string with a response code and the response from server
@@ -58,7 +58,7 @@ class PythonDump {
 	//Simply checks to make sure password matches hash and user has access
 	function check_password() {
 		if ($this->password != False) {
-			if(password_verify($this->userpassword, $this->password)) {
+			if(md5($this->userpassword) == $this->password) {
 				return true;
 			} else {
 				return false;
