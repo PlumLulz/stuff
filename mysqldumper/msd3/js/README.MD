@@ -1,3 +1,0 @@
-# Javascript
-
-Included JS files. 

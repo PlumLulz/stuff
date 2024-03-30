@@ -1,3 +1,0 @@
-# Images
-
-Included image files. 

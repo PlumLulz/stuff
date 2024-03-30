@@ -1,3 +1,0 @@
-# Dumps
-
-Dump directory.
